@@ -6,42 +6,37 @@ Read `memory/maturity-scale.md` for the full scoring rubric, field definitions, 
 
 ## Instructions
 
-### Step 1 — Collect inputs
+### Step 1 — Verify credentials are set in the environment
 
-Read `memory/user-profile.md` first. It may contain a `## Credentials` section with:
+This skill requires all credentials to be supplied via environment variables before invocation. Do not prompt for them, do not read them from any file, do not write them anywhere.
 
-- `thinkcnap.org API token`
-- `AWS Access Key ID`
-- `AWS Secret Access Key`
-- `AWS Region`
+Required environment variables:
 
-Use any values found there silently — do not ask for credentials that are already present. Only prompt for credentials that are missing.
+- `THINKCNAP_API_TOKEN` — from thinkcnap.org → Integrations → API Token
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` — IAM user/role with the AWS managed policy `arn:aws:iam::aws:policy/SecurityAudit` attached
+- `AWS_DEFAULT_REGION`
 
-If you collect new credentials from the user, save them to the `## Credentials` section in `memory/user-profile.md` (create the section if absent). Never display credentials in terminal output — mask as `***` if they must be referenced.
-
-Once all credentials are known, export them as environment variables before running any commands:
+Check they are all set:
 
 ```bash
-export THINKCNAP_API_TOKEN="<token>"
-export AWS_ACCESS_KEY_ID="<key>"
-export AWS_SECRET_ACCESS_KEY="<secret>"
-export AWS_DEFAULT_REGION="<region>"
+for v in THINKCNAP_API_TOKEN AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION; do
+  [ -n "${!v}" ] && echo "$v: set" || echo "$v: MISSING"
+done
 ```
+
+If any are missing, stop and instruct the user to export them in their shell before re-invoking this skill (e.g. `! export THINKCNAP_API_TOKEN=… AWS_ACCESS_KEY_ID=… AWS_SECRET_ACCESS_KEY=… AWS_DEFAULT_REGION=…` in the Claude Code prompt). Never display credential values back — mask as `***` if they must be referenced.
 
 Use `$THINKCNAP_API_TOKEN`, `$AWS_ACCESS_KEY_ID`, etc. in all subsequent shell commands — never inline the values.
 
-> Attach the AWS managed policy `arn:aws:iam::aws:policy/SecurityAudit` to the IAM user or role. It grants read-only access across all services this assessment needs.
-
-The file also contains company context, tooling answers with dates, and prior assessment findings. Note what is already known so you do not ask for it again unless it is stale (see re-ask rules in Steps 4b and 5).
+Then read `memory/user-profile.md` for non-credential context only: prior tooling answers (see re-ask rules in Step 4b), `## Context` (see Step 5), and prior assessment findings. Treat nothing in that file as a credential source.
 
 ---
 
 ### Step 2 — Fetch framework from thinkcnap.org
 
-```bash
-curl -s "https://thinkcnap.org/api/integrations/get-user-aws-maturity" \
-  -H "Authorization: Bearer $THINKCNAP_API_TOKEN"
-```
+Read `memory/thinkcnap-api.md` for the API contract — it is the source of truth for endpoints, auth, and response schemas.
+
+Call `GET /api/integrations/get-user-aws-maturity` as documented there, authenticating with `$THINKCNAP_API_TOKEN`.
 
 If the API returns an error, stop and report it to the user.
 
@@ -235,23 +230,11 @@ Apply any edits, then proceed.
 
 ### Step 8 — Submit to thinkcnap.org
 
-Call `POST /api/integrations/update-measure` once per measure. Omit:
+Call `POST /api/integrations/update-measure` as documented in `memory/thinkcnap-api.md`, once per measure, authenticating with `$THINKCNAP_API_TOKEN`.
+
+Omit:
 - Measures where `present_maturity` is `-1` (not applicable)
 - Measures marked **skipped** due to insufficient evidence
-
-```bash
-curl -s -X POST "https://thinkcnap.org/api/integrations/update-measure" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $THINKCNAP_API_TOKEN" \
-  -d '{
-    "measure_id": "<measure_id>",
-    "impact": "<from API response>",
-    "effort": "<from API response>",
-    "initial_maturity": <value>,
-    "present_maturity": <value>,
-    "desired_maturity": <value>
-  }'
-```
 
 Check the response for each call and report any errors before continuing to the next measure.
 

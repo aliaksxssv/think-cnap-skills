@@ -1,7 +1,7 @@
 # think-cnap API Reference
 
 Base URL: `https://thinkcnap.org`  
-Auth: `Authorization: Bearer <token>` — get from thinkcnap.org → Integrations → API Token.  
+Auth: `Authorization: Bearer $THINKCNAP_API_TOKEN` — token comes from thinkcnap.org → Integrations → API Token and must be supplied via the `THINKCNAP_API_TOKEN` environment variable. Never inline the token value.  
 Errors: `401 { "error": "..." }` for missing/invalid/expired/revoked token.
 
 ## GET /api/integrations/get-user-aws-maturity
@@ -41,7 +41,7 @@ Submit a score for a single measure. Call once per measure. Omit measures where 
 ```bash
 curl -s -X POST "https://thinkcnap.org/api/integrations/update-measure" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <TOKEN>" \
+  -H "Authorization: Bearer $THINKCNAP_API_TOKEN" \
   -d '{
     "measure_id": "SEC04-BP01-AWS-001",
     "impact": "<from GET response>",
