@@ -1,4 +1,4 @@
-# ThinkCNAP Security Skills
+# ThinkCNAP Skills
 
 > Run an AWS security assessment from your terminal, in minutes — and ship the results straight to [thinkcnap.org](https://thinkcnap.org).
 
